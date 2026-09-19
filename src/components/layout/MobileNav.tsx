@@ -1,0 +1,181 @@
+import React, { useState } from 'react';
+import {
+  Menu,
+  X,
+  LayoutDashboard,
+  CheckSquare,
+  Calendar,
+  BarChart3,
+  UserCheck,
+  LogOut,
+  Plus,
+  Check
+} from 'lucide-react';
+import { ActiveNav, User } from '../../types';
+
+interface MobileNavProps {
+  activeNav: ActiveNav;
+  onSelectNav: (nav: ActiveNav) => void;
+  user: User;
+  onLogout: () => void;
+  onQuickAddTask: () => void;
+  todayPendingCount: number;
+}
+
+export const MobileNav: React.FC<MobileNavProps> = ({
+  activeNav,
+  onSelectNav,
+  user,
+  onLogout,
+  onQuickAddTask,
+  todayPendingCount,
+}) => {
+  const [isOpen, setIsOpen] = useState(false);
+
+  const navItems = [
+    { id: 'dashboard' as ActiveNav, label: 'Dashboard', icon: LayoutDashboard },
+    { id: 'daily_tasks' as ActiveNav, label: 'Daily Tasks', icon: CheckSquare, badge: todayPendingCount > 0 ? todayPendingCount : undefined },
+    { id: 'calendar' as ActiveNav, label: 'Calendar', icon: Calendar },
+    { id: 'reports' as ActiveNav, label: 'Reports', icon: BarChart3 },
+    { id: 'profile' as ActiveNav, label: 'Profile', icon: UserCheck },
+  ];
+
+  const handleSelect = (nav: ActiveNav) => {
+    onSelectNav(nav);
+    setIsOpen(false);
+  };
+
+  return (
+    <header className="md:hidden sticky top-0 z-40 bg-white border-b border-slate-200">
+      {/* Top Mobile Bar */}
+      <div className="flex items-center justify-between px-4 h-16">
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            id="mobile-menu-button"
+            onClick={() => setIsOpen(!isOpen)}
+            aria-label="Toggle navigation menu"
+            className="p-2 rounded-xl text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition cursor-pointer"
+          >
+            {isOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+          </button>
+          <div className="flex items-center gap-2">
+            <div className="w-7 h-7 rounded-lg bg-indigo-600 text-white flex items-center justify-center">
+              <Check className="w-4 h-4 stroke-[3]" />
+            </div>
+            <span className="font-bold text-slate-900 text-base">TaskFlow</span>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            id="mobile-quick-add-task-button"
+            onClick={onQuickAddTask}
+            className="flex items-center gap-1.5 py-1.5 px-3 rounded-lg bg-indigo-600 text-white text-xs font-semibold shadow-xs transition cursor-pointer"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Add</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => handleSelect('profile')}
+            className="w-8 h-8 rounded-full bg-indigo-100 text-indigo-700 font-bold text-xs flex items-center justify-center border border-indigo-200 cursor-pointer"
+          >
+            {user.fullName.charAt(0).toUpperCase()}
+          </button>
+        </div>
+      </div>
+
+      {/* Mobile Drawer Backdrop & Menu */}
+      {isOpen && (
+        <div className="fixed inset-0 z-50 flex">
+          <div
+            className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs transition-opacity"
+            onClick={() => setIsOpen(false)}
+          />
+
+          <div className="relative flex-1 flex flex-col max-w-xs w-full bg-white shadow-xl z-10">
+            <div className="p-4 border-b border-slate-100 flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-indigo-600 text-white flex items-center justify-center">
+                  <Check className="w-5 h-5 stroke-[3]" />
+                </div>
+                <div>
+                  <p className="font-bold text-slate-900 text-sm">TaskFlow</p>
+                  <p className="text-[10px] text-slate-400">Daily Task Planner</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                id="close-mobile-menu"
+                onClick={() => setIsOpen(false)}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Nav list */}
+            <nav className="flex-1 px-3 py-4 space-y-1.5 overflow-y-auto">
+              {navItems.map((item) => {
+                const Icon = item.icon;
+                const isActive = activeNav === item.id;
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    id={`mobile-nav-${item.id}`}
+                    onClick={() => handleSelect(item.id)}
+                    className={`w-full flex items-center justify-between px-3.5 py-3 rounded-xl text-sm font-medium transition cursor-pointer ${
+                      isActive
+                        ? 'bg-indigo-50 text-indigo-700 font-semibold'
+                        : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <Icon className={`w-5 h-5 ${isActive ? 'text-indigo-600' : 'text-slate-400'}`} />
+                      <span>{item.label}</span>
+                    </div>
+                    {item.badge !== undefined && (
+                      <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800">
+                        {item.badge}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </nav>
+
+            {/* User details and Logout in Mobile */}
+            <div className="p-4 border-t border-slate-100 bg-slate-50/70">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-10 h-10 rounded-full bg-indigo-100 text-indigo-700 font-bold text-sm flex items-center justify-center border border-indigo-200">
+                  {user.fullName.charAt(0).toUpperCase()}
+                </div>
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-slate-900 truncate">{user.fullName}</p>
+                  <p className="text-xs text-slate-500 truncate">{user.email}</p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                id="mobile-logout-button"
+                onClick={() => {
+                  setIsOpen(false);
+                  onLogout();
+                }}
+                className="w-full flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-xs font-semibold text-rose-600 bg-rose-50 hover:bg-rose-100 transition cursor-pointer"
+              >
+                <LogOut className="w-4 h-4" />
+                <span>Logout</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </header>
+  );
+};
