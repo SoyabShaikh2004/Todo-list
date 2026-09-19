@@ -27,8 +27,7 @@ const initSeedUser = (): User => {
   const existingUsers = getUsers();
   if (existingUsers.length === 0) {
     saveUsers([demoUser]);
-    // Seed initial tasks for this user
-    seedUserTasks(demoUser.id);
+    saveUserTasks(demoUser.id, []);
   }
   return demoUser;
 };
@@ -76,8 +75,8 @@ export const registerUser = (userData: Omit<User, 'id' | 'createdAt' | 'password
   users.push(newUser);
   saveUsers(users);
 
-  // Initialize initial starter tasks for the new user
-  seedUserTasks(newUser.id, newUser.fullName);
+  // Initialize clean empty task repository for user
+  saveUserTasks(newUser.id, []);
 
   return { success: true, message: 'Account created successfully! You can now log in.', user: newUser };
 };
@@ -155,10 +154,16 @@ export const updateTaskForUser = (userId: string, updatedTask: Task): void => {
   const index = tasks.findIndex((t) => t.id === updatedTask.id);
   if (index !== -1) {
     // If status changed to completed, set completedAt
-    if (updatedTask.status === 'completed' && !updatedTask.completedAt) {
-      updatedTask.completedAt = new Date().toISOString();
-    } else if (updatedTask.status !== 'completed') {
+    if (updatedTask.status === 'completed') {
+      if (!updatedTask.completedAt) {
+        updatedTask.completedAt = new Date().toISOString();
+      }
+      updatedTask.incompleteReason = undefined;
+    } else if (updatedTask.status === 'not_completed') {
       updatedTask.completedAt = undefined;
+    } else {
+      updatedTask.completedAt = undefined;
+      updatedTask.incompleteReason = undefined;
     }
     tasks[index] = updatedTask;
     saveUserTasks(userId, tasks);
@@ -171,6 +176,45 @@ export const deleteTaskForUser = (userId: string, taskId: string): void => {
   saveUserTasks(userId, filtered);
 };
 
+export const markTaskCompleted = (userId: string, taskId: string): Task | null => {
+  const tasks = getUserTasks(userId);
+  const task = tasks.find((t) => t.id === taskId);
+  if (!task) return null;
+
+  task.status = 'completed';
+  task.completedAt = new Date().toISOString();
+  task.incompleteReason = undefined;
+
+  saveUserTasks(userId, tasks);
+  return task;
+};
+
+export const markTaskNotCompleted = (userId: string, taskId: string, reason: string): Task | null => {
+  const tasks = getUserTasks(userId);
+  const task = tasks.find((t) => t.id === taskId);
+  if (!task) return null;
+
+  task.status = 'not_completed';
+  task.incompleteReason = reason.trim();
+  task.completedAt = undefined;
+
+  saveUserTasks(userId, tasks);
+  return task;
+};
+
+export const markTaskPending = (userId: string, taskId: string): Task | null => {
+  const tasks = getUserTasks(userId);
+  const task = tasks.find((t) => t.id === taskId);
+  if (!task) return null;
+
+  task.status = 'pending';
+  task.completedAt = undefined;
+  task.incompleteReason = undefined;
+
+  saveUserTasks(userId, tasks);
+  return task;
+};
+
 export const toggleTaskStatus = (userId: string, taskId: string): Task | null => {
   const tasks = getUserTasks(userId);
   const task = tasks.find((t) => t.id === taskId);
@@ -179,115 +223,56 @@ export const toggleTaskStatus = (userId: string, taskId: string): Task | null =>
   if (task.status === 'completed') {
     task.status = 'pending';
     task.completedAt = undefined;
+    task.incompleteReason = undefined;
   } else {
     task.status = 'completed';
     task.completedAt = new Date().toISOString();
+    task.incompleteReason = undefined;
   }
 
   saveUserTasks(userId, tasks);
   return task;
 };
 
-export const updateUserProfile = (userId: string, updates: { fullName?: string; mobile?: string; newPassword?: string }): { success: boolean; message: string; user?: User } => {
+export const clearAllUserTasks = (userId: string): void => {
+  if (!userId) return;
+  saveUserTasks(userId, []);
+};
+
+export const updateUserProfile = (
+  userId: string,
+  updates: {
+    fullName?: string;
+    mobile?: string;
+    currentPassword?: string;
+    newPassword?: string;
+  }
+): { success: boolean; message: string; user?: User } => {
   const users = getUsers();
   const index = users.findIndex((u) => u.id === userId);
   if (index === -1) {
-    return { success: false, message: 'User not found.' };
+    return { success: false, message: 'User account not found.' };
+  }
+
+  // If changing password, verify current password
+  if (updates.newPassword) {
+    if (updates.currentPassword && !verifyPassword(updates.currentPassword, users[index].passwordHash)) {
+      return { success: false, message: 'Current password does not match our records.' };
+    }
+    users[index].passwordHash = hashPassword(updates.newPassword);
   }
 
   if (updates.fullName) users[index].fullName = updates.fullName.trim();
   if (updates.mobile) users[index].mobile = updates.mobile.trim();
-  if (updates.newPassword) users[index].passwordHash = hashPassword(updates.newPassword);
 
   saveUsers(users);
-  return { success: true, message: 'Profile updated successfully!', user: users[index] };
+  return { success: true, message: 'Profile and account settings saved successfully!', user: users[index] };
 };
 
-// Seed initial tasks for a user
+// Seed initial tasks for a user (no-op to ensure no dummy task data in final application)
 export const seedUserTasks = (userId: string, userName?: string): void => {
-  const today = new Date().toISOString().split('T')[0];
-  
-  // Calculate yesterday and tomorrow dates
-  const d = new Date();
-  const yesterday = new Date(d.setDate(d.getDate() - 1)).toISOString().split('T')[0];
-  const tomorrow = new Date(new Date().setDate(new Date().getDate() + 1)).toISOString().split('T')[0];
-
-  const starterTasks: Task[] = [
-    {
-      id: `task_init_1_${userId}`,
-      userId,
-      title: 'Review quarterly project deliverables',
-      description: 'Check milestone alignment with product managers and confirm sprint backlog.',
-      dueDate: today,
-      dueTime: '09:30',
-      priority: 'high',
-      status: 'completed',
-      category: 'Work',
-      completedAt: new Date().toISOString(),
-      createdAt: new Date().toISOString(),
-    },
-    {
-      id: `task_init_2_${userId}`,
-      userId,
-      title: 'Prepare presentation for daily client sync',
-      description: 'Gather metrics, status updates, and blocker documentation into slide deck.',
-      dueDate: today,
-      dueTime: '11:00',
-      priority: 'urgent',
-      status: 'in_progress',
-      category: 'Work',
-      createdAt: new Date().toISOString(),
-    },
-    {
-      id: `task_init_3_${userId}`,
-      userId,
-      title: '30-minute cardio & stretching routine',
-      description: 'Run 3km at the park or treadmill, followed by cool-down stretch.',
-      dueDate: today,
-      dueTime: '16:00',
-      priority: 'medium',
-      status: 'pending',
-      category: 'Health',
-      createdAt: new Date().toISOString(),
-    },
-    {
-      id: `task_init_4_${userId}`,
-      userId,
-      title: 'Review monthly utility & subscription expenses',
-      description: 'Check bank accounts, balance budget spreadsheet, and schedule invoice payments.',
-      dueDate: today,
-      dueTime: '18:30',
-      priority: 'low',
-      status: 'pending',
-      category: 'Finance',
-      createdAt: new Date().toISOString(),
-    },
-    {
-      id: `task_init_5_${userId}`,
-      userId,
-      title: 'Finish reading Chapter 4 of System Design book',
-      description: 'Take notes on distributed caching patterns and database replication.',
-      dueDate: tomorrow,
-      dueTime: '20:00',
-      priority: 'medium',
-      status: 'pending',
-      category: 'Study',
-      createdAt: new Date().toISOString(),
-    },
-    {
-      id: `task_init_6_${userId}`,
-      userId,
-      title: 'Weekly team sprint retrospective',
-      description: 'Discuss achievements, friction points, and process improvements.',
-      dueDate: yesterday,
-      dueTime: '15:00',
-      priority: 'high',
-      status: 'completed',
-      category: 'Work',
-      completedAt: new Date(Date.now() - 86400000).toISOString(),
-      createdAt: new Date(Date.now() - 86400000).toISOString(),
-    },
-  ];
-
-  saveUserTasks(userId, starterTasks);
+  const existing = getUserTasks(userId);
+  if (!existing || existing.length === 0) {
+    saveUserTasks(userId, []);
+  }
 };

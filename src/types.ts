@@ -1,6 +1,6 @@
 export type Priority = 'low' | 'medium' | 'high' | 'urgent';
 
-export type TaskStatus = 'pending' | 'in_progress' | 'completed';
+export type TaskStatus = 'pending' | 'in_progress' | 'completed' | 'not_completed';
 
 export type TaskCategory = 'Work' | 'Personal' | 'Study' | 'Health' | 'Finance' | 'General';
 
@@ -15,6 +15,7 @@ export interface Task {
   status: TaskStatus;
   category: TaskCategory;
   completedAt?: string;
+  incompleteReason?: string;
   createdAt: string;
 }
 
@@ -28,3 +29,5 @@ export interface User {
 }
 
 export type ActiveNav = 'dashboard' | 'daily_tasks' | 'calendar' | 'reports' | 'profile';
+
+export type Theme = 'light' | 'dark';

@@ -26,7 +26,7 @@ export const DailyReportModal: React.FC<DailyReportModalProps> = ({
   const completed = dayTasks.filter((t) => t.status === 'completed').length;
   const inProgress = dayTasks.filter((t) => t.status === 'in_progress').length;
   const pending = dayTasks.filter((t) => t.status === 'pending').length;
-  const incomplete = total - completed;
+  const notCompleted = dayTasks.filter((t) => t.status === 'not_completed').length;
   const percentage = total > 0 ? Math.round((completed / total) * 100) : 0;
 
   // Formatted date
@@ -45,15 +45,17 @@ User: ${user.fullName} (${user.email})
 Summary:
 - Total Tasks: ${total}
 - Completed: ${completed} (${percentage}%)
-- In Progress: ${inProgress}
-- Pending: ${pending}
-- Incomplete Remaining: ${incomplete}
+- Pending: ${pending + inProgress}
+- Not Completed: ${notCompleted}
 
 Completed Tasks:
 ${dayTasks.filter((t) => t.status === 'completed').map((t) => `  ✓ [${t.category}] ${t.title}`).join('\n') || '  (None yet)'}
 
-Pending & Incomplete Tasks:
-${dayTasks.filter((t) => t.status !== 'completed').map((t) => `  ⏳ [${t.priority.toUpperCase()}] ${t.title} ${t.dueTime ? `@ ${t.dueTime}` : ''}`).join('\n') || '  (All completed!)'}
+Not Completed Tasks (with reasons):
+${dayTasks.filter((t) => t.status === 'not_completed').map((t) => `  ✕ [${t.category}] ${t.title} - Reason: "${t.incompleteReason || 'Not specified'}"`).join('\n') || '  (None)'}
+
+Pending Tasks:
+${dayTasks.filter((t) => t.status === 'pending' || t.status === 'in_progress').map((t) => `  ⏳ [${t.priority.toUpperCase()}] ${t.title} ${t.dueTime ? `@ ${t.dueTime}` : ''}`).join('\n') || '  (None)'}
 `;
 
     navigator.clipboard.writeText(text);
@@ -115,22 +117,26 @@ ${dayTasks.filter((t) => t.status !== 'completed').map((t) => `  ⏳ [${t.priori
 
         <div className="overflow-y-auto py-5 space-y-6 flex-1 pr-1">
           {/* Executive KPI Stats */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/70">
-              <span className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block">Total Tasks</span>
-              <span className="text-2xl font-extrabold text-slate-900 mt-1 block">{total}</span>
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5">
+            <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/70 text-center">
+              <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider block">Total</span>
+              <span className="text-xl font-extrabold text-slate-900 mt-1 block">{total}</span>
             </div>
-            <div className="p-3.5 rounded-xl bg-emerald-50/60 border border-emerald-200/70">
-              <span className="text-[11px] font-semibold text-emerald-700 uppercase tracking-wider block">Completed</span>
-              <span className="text-2xl font-extrabold text-emerald-700 mt-1 block">{completed}</span>
+            <div className="p-3 rounded-xl bg-emerald-50/60 border border-emerald-200/70 text-center">
+              <span className="text-[10px] font-semibold text-emerald-700 uppercase tracking-wider block">Completed</span>
+              <span className="text-xl font-extrabold text-emerald-700 mt-1 block">{completed}</span>
             </div>
-            <div className="p-3.5 rounded-xl bg-amber-50/60 border border-amber-200/70">
-              <span className="text-[11px] font-semibold text-amber-700 uppercase tracking-wider block">Pending</span>
-              <span className="text-2xl font-extrabold text-amber-700 mt-1 block">{pending}</span>
+            <div className="p-3 rounded-xl bg-amber-50/60 border border-amber-200/70 text-center">
+              <span className="text-[10px] font-semibold text-amber-700 uppercase tracking-wider block">Pending</span>
+              <span className="text-xl font-extrabold text-amber-700 mt-1 block">{pending + inProgress}</span>
             </div>
-            <div className="p-3.5 rounded-xl bg-indigo-50/60 border border-indigo-200/70">
-              <span className="text-[11px] font-semibold text-indigo-700 uppercase tracking-wider block">Completion</span>
-              <span className="text-2xl font-extrabold text-indigo-700 mt-1 block">{percentage}%</span>
+            <div className="p-3 rounded-xl bg-rose-50/60 border border-rose-200/70 text-center">
+              <span className="text-[10px] font-semibold text-rose-700 uppercase tracking-wider block">Incomplete</span>
+              <span className="text-xl font-extrabold text-rose-700 mt-1 block">{notCompleted}</span>
+            </div>
+            <div className="p-3 rounded-xl bg-indigo-50/60 border border-indigo-200/70 text-center col-span-2 sm:col-span-1">
+              <span className="text-[10px] font-semibold text-indigo-700 uppercase tracking-wider block">Rate</span>
+              <span className="text-xl font-extrabold text-indigo-700 mt-1 block">{percentage}%</span>
             </div>
           </div>
 
@@ -148,7 +154,7 @@ ${dayTasks.filter((t) => t.status !== 'completed').map((t) => `  ⏳ [${t.priori
             </div>
             <div className="flex items-center justify-between text-[11px] text-slate-400">
               <span>{completed} finished</span>
-              <span>{incomplete} remaining</span>
+              <span>{total - completed} unfinished</span>
             </div>
           </div>
 
@@ -182,21 +188,54 @@ ${dayTasks.filter((t) => t.status !== 'completed').map((t) => `  ⏳ [${t.priori
             )}
           </div>
 
+          {/* Not Completed Tasks with Reasons */}
+          {notCompleted > 0 && (
+            <div>
+              <h4 className="text-xs font-bold uppercase tracking-wider text-rose-600 flex items-center gap-1.5 mb-2.5">
+                <AlertTriangle className="w-4 h-4 text-rose-500" />
+                <span>Not Completed Tasks & Reasons ({notCompleted})</span>
+              </h4>
+              <div className="space-y-2">
+                {dayTasks
+                  .filter((t) => t.status === 'not_completed')
+                  .map((task) => (
+                    <div
+                      key={task.id}
+                      className="p-3 rounded-xl border border-rose-200 bg-rose-50/30 flex flex-col gap-1.5 text-xs"
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-bold text-slate-900 truncate">{task.title}</span>
+                        <span className="px-2 py-0.5 rounded-md bg-rose-100 text-rose-800 text-[10px] font-extrabold uppercase shrink-0">
+                          {task.priority}
+                        </span>
+                      </div>
+                      {task.incompleteReason && (
+                        <div className="p-2 bg-white rounded-lg border border-rose-200 text-rose-900 text-[11px]">
+                          <strong className="text-rose-950 font-bold">Documented Reason:</strong>{' '}
+                          <span className="italic">"{task.incompleteReason}"</span>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+              </div>
+            </div>
+          )}
+
           {/* Pending & In Progress Tasks */}
           <div>
             <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5 mb-2.5">
               <Clock className="w-4 h-4 text-amber-500" />
-              <span>Pending & Incomplete Tasks ({incomplete})</span>
+              <span>Pending Tasks ({pending + inProgress})</span>
             </h4>
-            {incomplete === 0 ? (
+            {pending + inProgress === 0 ? (
               <div className="p-3 bg-emerald-50 rounded-xl text-emerald-800 text-xs font-semibold flex items-center gap-2">
                 <Check className="w-4 h-4 text-emerald-600" />
-                <span>All tasks for this day are finished! Fantastic job.</span>
+                <span>All pending tasks for this day are resolved!</span>
               </div>
             ) : (
               <div className="space-y-2">
                 {dayTasks
-                  .filter((t) => t.status !== 'completed')
+                  .filter((t) => t.status === 'pending' || t.status === 'in_progress')
                   .map((task) => (
                     <div
                       key={task.id}

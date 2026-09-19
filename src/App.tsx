@@ -8,19 +8,24 @@ import {
   updateTaskForUser,
   deleteTaskForUser,
   toggleTaskStatus,
+  markTaskCompleted,
+  markTaskNotCompleted,
+  markTaskPending,
 } from './services/storage';
 
 import { SignUpPage } from './components/auth/SignUpPage';
 import { SignInPage } from './components/auth/SignInPage';
 import { Sidebar } from './components/layout/Sidebar';
 import { MobileNav } from './components/layout/MobileNav';
+import { MobileBottomNav } from './components/layout/MobileBottomNav';
 import { DashboardView } from './components/dashboard/DashboardView';
 import { DailyTasksView } from './components/tasks/DailyTasksView';
 import { CalendarView } from './components/calendar/CalendarView';
-import { ReportsView } from './components/reports/ReportsView';
+import { DailyReportPage } from './components/reports/DailyReportPage';
 import { ProfileView } from './components/profile/ProfileView';
 import { TaskModal } from './components/tasks/TaskModal';
 import { DailyReportModal } from './components/reports/DailyReportModal';
+import { ConfirmDeleteModal } from './components/common/ConfirmDeleteModal';
 
 export default function App() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -36,6 +41,7 @@ export default function App() {
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [taskModalDefaultDate, setTaskModalDefaultDate] = useState<string | undefined>(undefined);
   const [isDailyReportOpen, setIsDailyReportOpen] = useState(false);
+  const [taskPendingDelete, setTaskPendingDelete] = useState<Task | null>(null);
 
   // Initialize session on mount
   useEffect(() => {
@@ -86,6 +92,29 @@ export default function App() {
     reloadTasks();
   };
 
+  const handleMarkCompleted = (taskId: string) => {
+    if (!currentUser) return;
+    markTaskCompleted(currentUser.id, taskId);
+    reloadTasks();
+  };
+
+  const handleMarkNotCompleted = (taskId: string, reason: string) => {
+    if (!currentUser) return;
+    markTaskNotCompleted(currentUser.id, taskId, reason);
+    reloadTasks();
+  };
+
+  const handleMarkPending = (taskId: string) => {
+    if (!currentUser) return;
+    markTaskPending(currentUser.id, taskId);
+    reloadTasks();
+  };
+
+  const handleNavigateToDailyTasks = (date: string) => {
+    setSelectedDate(date);
+    setActiveNav('daily_tasks');
+  };
+
   const handleOpenAddTask = (targetDate?: string) => {
     setEditingTask(null);
     setTaskModalDefaultDate(targetDate || selectedDate || todayStr);
@@ -99,8 +128,16 @@ export default function App() {
   };
 
   const handleDeleteTask = (taskId: string) => {
-    if (!currentUser) return;
-    deleteTaskForUser(currentUser.id, taskId);
+    const foundTask = tasks.find((t) => t.id === taskId);
+    if (foundTask) {
+      setTaskPendingDelete(foundTask);
+    }
+  };
+
+  const handleConfirmDeleteTask = () => {
+    if (!currentUser || !taskPendingDelete) return;
+    deleteTaskForUser(currentUser.id, taskPendingDelete.id);
+    setTaskPendingDelete(null);
     reloadTasks();
   };
 
@@ -142,7 +179,7 @@ export default function App() {
 
   // Authenticated Flow (Dashboard, Tasks, Calendar, Reports, Profile)
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col md:flex-row font-sans text-slate-900">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col md:flex-row font-sans text-slate-900 dark:text-slate-100 transition-colors">
       {/* Desktop Left Sidebar */}
       <Sidebar
         activeNav={activeNav}
@@ -166,7 +203,7 @@ export default function App() {
         />
 
         {/* View Router */}
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto">
+        <main className="flex-1 p-3.5 sm:p-6 lg:p-8 pb-24 md:pb-10 max-w-7xl w-full mx-auto">
           {activeNav === 'dashboard' && (
             <DashboardView
               user={currentUser}
@@ -184,8 +221,13 @@ export default function App() {
           {activeNav === 'daily_tasks' && (
             <DailyTasksView
               tasks={tasks}
+              selectedDate={selectedDate}
+              onSelectDate={setSelectedDate}
               onToggleTask={handleToggleTask}
-              onOpenAddTask={() => handleOpenAddTask()}
+              onMarkCompleted={handleMarkCompleted}
+              onMarkNotCompleted={handleMarkNotCompleted}
+              onMarkPending={handleMarkPending}
+              onOpenAddTask={(date) => handleOpenAddTask(date)}
               onOpenEditTask={handleOpenEditTask}
               onDeleteTask={handleDeleteTask}
             />
@@ -197,15 +239,24 @@ export default function App() {
               selectedDate={selectedDate}
               onSelectDate={setSelectedDate}
               onToggleTask={handleToggleTask}
+              onMarkCompleted={handleMarkCompleted}
+              onMarkNotCompleted={handleMarkNotCompleted}
+              onMarkPending={handleMarkPending}
               onOpenAddTaskForDate={(d) => handleOpenAddTask(d)}
+              onNavigateToDailyTasks={handleNavigateToDailyTasks}
             />
           )}
 
           {activeNav === 'reports' && (
-            <ReportsView
-              tasks={tasks}
+            <DailyReportPage
               user={currentUser}
-              onOpenDailyReport={() => setIsDailyReportOpen(true)}
+              tasks={tasks}
+              selectedDate={selectedDate}
+              onSelectDate={setSelectedDate}
+              onMarkCompleted={handleMarkCompleted}
+              onMarkNotCompleted={handleMarkNotCompleted}
+              onMarkPending={handleMarkPending}
+              onOpenAddTaskForDate={(d) => handleOpenAddTask(d)}
             />
           )}
 
@@ -213,9 +264,19 @@ export default function App() {
             <ProfileView
               user={currentUser}
               onUpdateUser={(updated) => setCurrentUser(updated)}
+              onLogout={handleLogout}
+              onTasksCleared={reloadTasks}
             />
           )}
         </main>
+
+        {/* Mobile Sticky Bottom Navigation */}
+        <MobileBottomNav
+          activeNav={activeNav}
+          onSelectNav={setActiveNav}
+          onQuickAddTask={() => handleOpenAddTask()}
+          todayPendingCount={todayPendingCount}
+        />
       </div>
 
       {/* Add / Edit Task Modal */}
@@ -234,6 +295,16 @@ export default function App() {
         dateStr={selectedDate}
         tasks={tasks}
         user={currentUser}
+      />
+
+      {/* Task Deletion Confirmation Modal */}
+      <ConfirmDeleteModal
+        isOpen={!!taskPendingDelete}
+        title="Delete Task"
+        message="Are you sure you want to permanently delete this task? This action cannot be undone."
+        itemTitle={taskPendingDelete?.title}
+        onConfirm={handleConfirmDeleteTask}
+        onClose={() => setTaskPendingDelete(null)}
       />
     </div>
   );
