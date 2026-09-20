@@ -7,11 +7,14 @@ import {
   Calendar,
   FileCheck2,
   UserCheck,
+  Database,
   LogOut,
   Plus,
   Check,
   Sun,
-  Moon
+  Moon,
+  ShieldCheck,
+  Users,
 } from 'lucide-react';
 import { ActiveNav, User } from '../../types';
 import { useTheme } from '../../context/ThemeContext';
@@ -36,11 +39,38 @@ export const MobileNav: React.FC<MobileNavProps> = ({
   const [isOpen, setIsOpen] = useState(false);
   const { theme, toggleTheme } = useTheme();
 
+  const isSuperAdmin = user.role === 'super_admin';
+  const isAdmin = user.role === 'admin';
+  const isDbAdmin = isSuperAdmin || user.email.toLowerCase() === 'soyxbshxikh@gmail.com';
+
   const navItems = [
-    { id: 'dashboard' as ActiveNav, label: 'Dashboard', icon: LayoutDashboard },
-    { id: 'daily_tasks' as ActiveNav, label: 'Daily Tasks', icon: CheckSquare, badge: todayPendingCount > 0 ? todayPendingCount : undefined },
-    { id: 'calendar' as ActiveNav, label: 'Calendar', icon: Calendar },
-    { id: 'reports' as ActiveNav, label: 'Daily Report', icon: FileCheck2 },
+    {
+      id: 'dashboard' as ActiveNav,
+      label: isSuperAdmin ? 'Command Center' : isAdmin ? 'Admin Dashboard' : 'My Workspace',
+      icon: LayoutDashboard,
+    },
+    {
+      id: 'daily_tasks' as ActiveNav,
+      label: isSuperAdmin ? 'All Tasks Matrix' : isAdmin ? 'Team & Directives' : 'Daily Tasks',
+      icon: CheckSquare,
+      badge: todayPendingCount > 0 ? todayPendingCount : undefined,
+    },
+    ...(isSuperAdmin || isAdmin
+      ? [
+          {
+            id: 'hierarchy' as ActiveNav,
+            label: isSuperAdmin ? 'Hierarchy & Admins' : 'Team Members',
+            icon: Users,
+          },
+        ]
+      : []),
+    { id: 'calendar' as ActiveNav, label: 'Calendar View', icon: Calendar },
+    {
+      id: 'reports' as ActiveNav,
+      label: isSuperAdmin ? 'Reports Feed' : isAdmin ? 'Team Reports' : 'Daily Work Report',
+      icon: FileCheck2,
+    },
+    ...(isDbAdmin ? [{ id: 'database' as ActiveNav, label: 'Cloud SQL DB', icon: Database }] : []),
     { id: 'profile' as ActiveNav, label: 'Profile & Settings', icon: UserCheck },
   ];
 
@@ -51,7 +81,6 @@ export const MobileNav: React.FC<MobileNavProps> = ({
 
   return (
     <header className="md:hidden sticky top-0 z-40 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 transition-colors">
-      {/* Top Mobile Bar */}
       <div className="flex items-center justify-between px-3.5 sm:px-4 h-16">
         <div className="flex items-center gap-2.5">
           <button
@@ -69,13 +98,14 @@ export const MobileNav: React.FC<MobileNavProps> = ({
             </div>
             <div>
               <span className="font-bold text-slate-900 dark:text-white text-base leading-none block">TaskFlow</span>
-              <span className="text-[10px] text-slate-500 dark:text-slate-400 font-medium leading-none block mt-0.5">Daily Planner</span>
+              <span className="text-[10px] text-slate-500 dark:text-slate-400 font-medium leading-none block mt-0.5">
+                {user.role === 'super_admin' ? 'Super Admin' : user.role === 'admin' ? 'Admin Lead' : 'Team User'}
+              </span>
             </div>
           </div>
         </div>
 
         <div className="flex items-center gap-1.5 sm:gap-2">
-          {/* Theme Quick Toggle */}
           <button
             type="button"
             id="mobile-theme-toggle-quick-btn"
@@ -86,7 +116,6 @@ export const MobileNav: React.FC<MobileNavProps> = ({
             {theme === 'dark' ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-slate-600 dark:text-slate-300" />}
           </button>
 
-          {/* Profile shortcut avatar */}
           <button
             type="button"
             id="mobile-header-profile-btn"
@@ -99,7 +128,7 @@ export const MobileNav: React.FC<MobileNavProps> = ({
         </div>
       </div>
 
-      {/* Mobile Drawer Backdrop & Menu */}
+      {/* Mobile Drawer */}
       {isOpen && (
         <div className="fixed inset-0 z-50 flex">
           <div
@@ -115,7 +144,7 @@ export const MobileNav: React.FC<MobileNavProps> = ({
                 </div>
                 <div>
                   <p className="font-bold text-slate-900 dark:text-white text-sm">TaskFlow</p>
-                  <p className="text-[10px] text-slate-400 dark:text-slate-500">Daily Task Planner</p>
+                  <p className="text-[10px] text-slate-400 dark:text-slate-500 capitalize">{user.role.replace('_', ' ')}</p>
                 </div>
               </div>
               <button
@@ -128,7 +157,6 @@ export const MobileNav: React.FC<MobileNavProps> = ({
               </button>
             </div>
 
-            {/* Nav list */}
             <nav className="flex-1 px-3 py-4 space-y-1.5 overflow-y-auto">
               {navItems.map((item) => {
                 const Icon = item.icon;
@@ -159,23 +187,6 @@ export const MobileNav: React.FC<MobileNavProps> = ({
               })}
             </nav>
 
-            {/* Theme Toggle in Mobile Menu */}
-            <div className="px-4 py-3 border-t border-slate-100 dark:border-slate-800">
-              <button
-                type="button"
-                id="mobile-drawer-theme-toggle"
-                onClick={toggleTheme}
-                className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60 text-slate-700 dark:text-slate-200 text-xs font-semibold cursor-pointer"
-              >
-                <span className="flex items-center gap-2">
-                  {theme === 'dark' ? <Moon className="w-4 h-4 text-indigo-400" /> : <Sun className="w-4 h-4 text-amber-500" />}
-                  <span>{theme === 'dark' ? 'Dark Theme' : 'Light Theme'}</span>
-                </span>
-                <span className="text-[11px] text-indigo-600 dark:text-indigo-400 font-bold">Switch</span>
-              </button>
-            </div>
-
-            {/* User details and Logout in Mobile */}
             <div className="p-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40">
               <div className="flex items-center gap-3 mb-3">
                 <div className="w-10 h-10 rounded-full bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 font-bold text-sm flex items-center justify-center border border-indigo-200 dark:border-indigo-800">
@@ -194,7 +205,7 @@ export const MobileNav: React.FC<MobileNavProps> = ({
                   setIsOpen(false);
                   onLogout();
                 }}
-                className="w-full flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-xs font-semibold text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 dark:hover:bg-rose-900/40 transition cursor-pointer"
+                className="w-full flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-xs font-semibold text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 transition cursor-pointer"
               >
                 <LogOut className="w-4 h-4" />
                 <span>Logout</span>
@@ -206,4 +217,3 @@ export const MobileNav: React.FC<MobileNavProps> = ({
     </header>
   );
 };
-

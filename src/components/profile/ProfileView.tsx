@@ -138,11 +138,13 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
     }
   };
 
-  const memberSince = new Date(user.createdAt).toLocaleDateString('en-US', {
-    month: 'long',
-    day: 'numeric',
-    year: 'numeric',
-  });
+  const memberSince = user.createdAt
+    ? new Date(user.createdAt).toLocaleDateString('en-US', {
+        month: 'long',
+        day: 'numeric',
+        year: 'numeric',
+      })
+    : 'Recently';
 
   return (
     <div className="space-y-4 sm:space-y-6 max-w-4xl mx-auto pb-16">

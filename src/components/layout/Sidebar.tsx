@@ -5,11 +5,15 @@ import {
   Calendar,
   FileCheck2,
   UserCheck,
+  Database,
   LogOut,
   Check,
   Plus,
   Sun,
-  Moon
+  Moon,
+  ShieldCheck,
+  Users,
+  Layers,
 } from 'lucide-react';
 import { ActiveNav, User } from '../../types';
 import { useTheme } from '../../context/ThemeContext';
@@ -33,13 +37,64 @@ export const Sidebar: React.FC<SidebarProps> = ({
 }) => {
   const { theme, toggleTheme } = useTheme();
 
+  const isSuperAdmin = user.role === 'super_admin';
+  const isAdmin = user.role === 'admin';
+  const isDbAdmin = isSuperAdmin || user.email.toLowerCase() === 'soyxbshxikh@gmail.com';
+
   const navItems = [
-    { id: 'dashboard' as ActiveNav, label: 'Dashboard', icon: LayoutDashboard },
-    { id: 'daily_tasks' as ActiveNav, label: 'Daily Tasks', icon: CheckSquare, badge: todayPendingCount > 0 ? todayPendingCount : undefined },
-    { id: 'calendar' as ActiveNav, label: 'Calendar', icon: Calendar },
-    { id: 'reports' as ActiveNav, label: 'Daily Report', icon: FileCheck2 },
+    {
+      id: 'dashboard' as ActiveNav,
+      label: isSuperAdmin ? 'Command Center' : isAdmin ? 'Admin Dashboard' : 'My Workspace',
+      icon: LayoutDashboard,
+    },
+    {
+      id: 'daily_tasks' as ActiveNav,
+      label: isSuperAdmin ? 'All Tasks Matrix' : isAdmin ? 'Team & Directives' : 'My Daily Tasks',
+      icon: CheckSquare,
+      badge: todayPendingCount > 0 ? todayPendingCount : undefined,
+    },
+    ...(isSuperAdmin || isAdmin
+      ? [
+          {
+            id: 'hierarchy' as ActiveNav,
+            label: isSuperAdmin ? 'Hierarchy & Admins' : 'My Team Members',
+            icon: Users,
+          },
+        ]
+      : []),
+    { id: 'calendar' as ActiveNav, label: 'Calendar View', icon: Calendar },
+    {
+      id: 'reports' as ActiveNav,
+      label: isSuperAdmin ? 'Daily Reports Feed' : isAdmin ? 'Team Reports' : 'Daily Work Report',
+      icon: FileCheck2,
+    },
+    ...(isDbAdmin ? [{ id: 'database' as ActiveNav, label: 'Cloud SQL DB', icon: Database }] : []),
     { id: 'profile' as ActiveNav, label: 'Profile & Settings', icon: UserCheck },
   ];
+
+  const getRoleBadge = () => {
+    if (user.role === 'super_admin') {
+      return (
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-300">
+          <ShieldCheck className="w-3 h-3 text-amber-600 dark:text-amber-400" />
+          Super Admin
+        </span>
+      );
+    }
+    if (user.role === 'admin') {
+      return (
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-100 text-indigo-900 dark:bg-indigo-950 dark:text-indigo-300">
+          <ShieldCheck className="w-3 h-3 text-indigo-600 dark:text-indigo-400" />
+          Admin
+        </span>
+      );
+    }
+    return (
+      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-100 text-blue-900 dark:bg-blue-950 dark:text-blue-300">
+        Team User
+      </span>
+    );
+  };
 
   return (
     <aside className="hidden md:flex md:w-64 md:flex-col md:fixed md:inset-y-0 bg-white dark:bg-slate-900 border-r border-slate-200/80 dark:border-slate-800 z-30 transition-colors">
@@ -51,11 +106,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </div>
           <div>
             <span className="text-base font-bold text-slate-900 dark:text-white tracking-tight block">TaskFlow</span>
-            <span className="text-[10px] font-medium uppercase tracking-wider text-slate-400 dark:text-slate-500 block -mt-0.5">Daily Planner</span>
+            <span className="text-[10px] font-medium uppercase tracking-wider text-slate-400 dark:text-slate-500 block -mt-0.5">Enterprise RBAC</span>
           </div>
         </div>
 
-        {/* Header Theme Toggle Icon */}
         <button
           type="button"
           id="sidebar-theme-toggle-quick-btn"
@@ -74,10 +128,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
           type="button"
           id="sidebar-add-task-btn"
           onClick={onQuickAddTask}
-          className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold shadow-sm shadow-indigo-200 dark:shadow-none transition cursor-pointer"
+          className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold shadow-sm transition cursor-pointer"
         >
           <Plus className="w-4 h-4" />
-          <span>+ Add Task</span>
+          <span>+ Assign Task</span>
         </button>
       </div>
 
@@ -119,8 +173,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
             {user.fullName.charAt(0).toUpperCase()}
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-xs font-semibold text-slate-800 dark:text-slate-200 truncate">{user.fullName}</p>
-            <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">{user.email}</p>
+            <div className="flex items-center justify-between gap-1">
+              <p className="text-xs font-semibold text-slate-800 dark:text-slate-200 truncate">{user.fullName}</p>
+            </div>
+            <div className="mt-0.5">{getRoleBadge()}</div>
           </div>
         </div>
 
@@ -137,4 +193,3 @@ export const Sidebar: React.FC<SidebarProps> = ({
     </aside>
   );
 };
-
