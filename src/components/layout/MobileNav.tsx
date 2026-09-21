@@ -15,9 +15,13 @@ import {
   Moon,
   ShieldCheck,
   Users,
+  FileText,
+  Download,
+  Loader2,
 } from 'lucide-react';
 import { ActiveNav, User } from '../../types';
 import { useTheme } from '../../context/ThemeContext';
+import { generateProjectDocumentationPDF } from '../../utils/projectDocsPdfGenerator';
 
 interface MobileNavProps {
   activeNav: ActiveNav;
@@ -37,11 +41,27 @@ export const MobileNav: React.FC<MobileNavProps> = ({
   todayPendingCount,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
+  const [isGeneratingDocs, setIsGeneratingDocs] = useState(false);
   const { theme, toggleTheme } = useTheme();
+
+  const handleDownloadDocsPDF = () => {
+    try {
+      setIsGeneratingDocs(true);
+      const doc = generateProjectDocumentationPDF();
+      doc.save('TaskFlow-Enterprise-Architecture-Documentation.pdf');
+    } catch (err) {
+      console.error('Failed to generate project docs PDF:', err);
+    } finally {
+      setTimeout(() => setIsGeneratingDocs(false), 800);
+    }
+  };
 
   const isSuperAdmin = user.role === 'super_admin';
   const isAdmin = user.role === 'admin';
-  const isDbAdmin = isSuperAdmin || user.email.toLowerCase() === 'soyxbshxikh@gmail.com';
+  const isDbAdmin =
+    isSuperAdmin ||
+    user.email.toLowerCase() === 'soyxbshxikh@gmail.com' ||
+    user.email.toLowerCase() === 'soyabdzyrisinfotech@gmail.com';
 
   const navItems = [
     {
@@ -186,6 +206,29 @@ export const MobileNav: React.FC<MobileNavProps> = ({
                 );
               })}
             </nav>
+
+            {/* System Documentation PDF Download (Super Admin only) */}
+            {isSuperAdmin && (
+              <div className="px-4 py-2 border-t border-slate-100 dark:border-slate-800">
+                <button
+                  type="button"
+                  id="mobile-download-docs-pdf-btn"
+                  onClick={handleDownloadDocsPDF}
+                  disabled={isGeneratingDocs}
+                  className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold text-indigo-700 dark:text-indigo-300 bg-indigo-50/80 dark:bg-indigo-950/40 hover:bg-indigo-100 dark:hover:bg-indigo-950/80 border border-indigo-200/70 dark:border-indigo-800/70 transition cursor-pointer disabled:opacity-60"
+                >
+                  <div className="flex items-center gap-2 min-w-0">
+                    {isGeneratingDocs ? (
+                      <Loader2 className="w-4 h-4 animate-spin text-indigo-600 dark:text-indigo-400" />
+                    ) : (
+                      <FileText className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                    )}
+                    <span className="truncate">{isGeneratingDocs ? 'Building PDF...' : 'System Docs (PDF)'}</span>
+                  </div>
+                  <Download className="w-3.5 h-3.5 text-indigo-500 shrink-0 ml-1" />
+                </button>
+              </div>
+            )}
 
             <div className="p-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40">
               <div className="flex items-center gap-3 mb-3">

@@ -84,8 +84,9 @@ export const ProfileView: React.FC<ProfileViewProps> = ({
     }
 
     // Password validation if user entered a new password
+    const hasExistingPassword = Boolean(user.passwordHash);
     if (newPassword) {
-      if (!currentPassword) {
+      if (hasExistingPassword && !currentPassword) {
         setMessage({ type: 'error', text: 'Please enter your current password to authorize changing it.' });
         return;
       }

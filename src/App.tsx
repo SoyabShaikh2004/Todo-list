@@ -533,6 +533,11 @@ export default function App() {
         dateStr={selectedDate}
         tasks={tasks}
         user={currentUser}
+        supervisingAdmin={supervisingAdmin}
+        onSubmitReport={async (reportData) => {
+          await submitDailyWorkReport(currentUser, reportData);
+          reloadData();
+        }}
       />
 
       {/* Admin Consolidated Report Submission Modal */}

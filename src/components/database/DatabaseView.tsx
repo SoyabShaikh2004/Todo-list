@@ -28,7 +28,10 @@ interface DatabaseViewProps {
 }
 
 export const DatabaseView: React.FC<DatabaseViewProps> = ({ currentUser }) => {
-  const isAuthorizedAdmin = currentUser.email.toLowerCase() === 'soyxbshxikh@gmail.com';
+  const isAuthorizedAdmin =
+    currentUser.role === 'super_admin' ||
+    currentUser.email.toLowerCase() === 'soyxbshxikh@gmail.com' ||
+    currentUser.email.toLowerCase() === 'soyabdzyrisinfotech@gmail.com';
   const [data, setData] = useState<DatabaseInspectionData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTable, setActiveTable] = useState<'tasks' | 'users' | 'schema'>('tasks');
@@ -43,7 +46,7 @@ export const DatabaseView: React.FC<DatabaseViewProps> = ({ currentUser }) => {
       return;
     }
     setIsLoading(true);
-    const result = await fetchDatabaseInspection(currentUser.email);
+    const result = await fetchDatabaseInspection(currentUser.email, currentUser.role);
     if (result) {
       setData(result);
     }

@@ -269,6 +269,62 @@ export const HierarchyManagementView: React.FC<HierarchyManagementViewProps> = (
             );
           })}
         </div>
+
+        {/* UNASSIGNED USERS (Directly under Super Admin or Pending Assignment) */}
+        {(() => {
+          const unassignedUsers = users.filter((u) => !u.adminId || !admins.some((a) => a.id === u.adminId));
+          if (unassignedUsers.length === 0) return null;
+          return (
+            <div className="bg-white dark:bg-slate-900 border border-amber-200 dark:border-amber-800/60 rounded-xl p-5 shadow-sm space-y-4">
+              <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+                <div className="flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded-full bg-amber-500" />
+                  <h4 className="text-base font-bold text-slate-900 dark:text-white">
+                    Unassigned Team Users ({unassignedUsers.length})
+                  </h4>
+                  <span className="text-xs text-slate-500">
+                    Not currently allocated to any Admin
+                  </span>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
+                {unassignedUsers.map((u) => (
+                  <div
+                    key={u.id}
+                    className="p-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30 flex items-center justify-between gap-3 text-xs"
+                  >
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-slate-900 dark:text-white">{u.fullName}</span>
+                        <span
+                          className={`px-1.5 py-0.2 rounded text-[10px] font-semibold ${
+                            u.status === 'active'
+                              ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
+                              : 'bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300'
+                          }`}
+                        >
+                          {u.status}
+                        </span>
+                      </div>
+                      <p className="text-slate-500">{u.email}</p>
+                    </div>
+                    {isSuperAdmin && (
+                      <button
+                        onClick={() => {
+                          setSelectedUserForReassign(u);
+                          setNewAdminId('');
+                        }}
+                        className="px-2.5 py-1 rounded text-[11px] font-semibold bg-indigo-600 text-white hover:bg-indigo-700"
+                      >
+                        Assign to Admin
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })()}
       </div>
 
       {/* REASSIGN ADMIN MODAL (For Super Admin) */}
